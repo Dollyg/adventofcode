@@ -1,32 +1,59 @@
 package day2
 
+trait Opcode {
+  def check(index: Int): Boolean
+  def execute(index: Int): (IntCode, Int)
+}
+
+case class Opcode1(intCode: IntCode) extends Opcode {
+  override def check(index: Int): Boolean = intCode.at(index) == 1
+
+  override def execute(index: Int): (IntCode, Int) = {
+    val index1 = intCode.at(index + 1)
+    val index2 = intCode.at(index + 2)
+    val outputIndex: Int = intCode.at(index + 3)
+    val nextIndex = index + 4
+    val sum = intCode.at(index1) + intCode.at(index2)
+    (intCode.updated(outputIndex, sum), nextIndex)
+  }
+}
+
+case class Opcode2(intCode: IntCode) extends Opcode {
+  override def check(index: Int): Boolean = intCode.at(index) == 2
+
+  override def execute(index: Int): (IntCode, Int) = {
+    val index1 = intCode.at(index + 1)
+    val index2 = intCode.at(index + 2)
+    val outputIndex: Int = intCode.at(index + 3)
+    val nextIndex = index + 4
+    val product = intCode.at(index1) * intCode.at(index2)
+    (intCode.updated(outputIndex, product), nextIndex)
+  }
+}
+
+case class Opcode99(intCode: IntCode) extends Opcode {
+  override def check(index: Int): Boolean = intCode.at(index) == 99
+  override def execute(index: Int): (IntCode, Int) =
+    throw new RuntimeException("Terminated")
+}
+
 case class IntCode(code: List[Int]) {
 
-  def opcode1(index1: Int, index2: Int, outputIndex: Int): IntCode = {
-    val sum = code(index1) + code(index2)
-    IntCode(code.updated(outputIndex, sum))
-  }
+  private val opCodes: List[Opcode] =
+    List(Opcode1(this), Opcode2(this), Opcode99(this))
 
-  def opcode2(index1: Int, index2: Int, outputIndex: Int): IntCode = {
-    val product = code(index1) * code(index2)
-    IntCode(code.updated(outputIndex, product))
-  }
-
-  def isOpcode1(index: Int): Boolean = code(index) == 1
-  def isOpcode2(index: Int): Boolean = code(index) == 2
-  def isOpcode99(index: Int): Boolean = code(index) == 99
   def at(index: Int): Int = code(index)
+  def updated(index: Int, elem: Int): IntCode =
+    IntCode(code.updated(index, elem))
 
   def calculate(index: Int): (IntCode, Int) = {
-    val dd = this match {
-      case _ if isOpcode1(index) =>
-        (opcode1(at(index + 1), at(index + 2), at(index + 3)), index + 4)
-
-      case _ if isOpcode2(index) =>
-        (opcode2(at(index + 1), at(index + 2), at(index + 3)), index + 4)
-
-      case _ => (this, index + 1)
-    }
+    val dd = opCodes
+      .collectFirst {
+        case opcode if opcode.check(index) =>
+          val x = opcode.execute(index)
+          x
+      }
+      .getOrElse((this, index + 1))
     println(
       s"At index $index, calculateCode= ${dd._1.code}, NextIndex=${dd._2}"
     )
@@ -51,20 +78,24 @@ object IntCode extends App {
   def calculate(intCode: IntCode, index: Int = 0): IntCode = {
     println(s"IntCode = ${intCode.code}, Index=$index")
     intCode.code match {
-      case Nil                       => intCode
-      case code if code(index) == 99 => intCode // terminate
+      case Nil                                 => intCode
+      case _ if Opcode99(intCode).check(index) => intCode // terminate
       case _ =>
         val (updatedCode, nextIndex) = intCode.calculate(index)
         calculate(updatedCode, nextIndex)
     }
   }
 
-//  println("****************" + calculate(IntCode(List(1, 0, 0, 0, 99))))
-//  println("****************" + calculate(IntCode(List(2, 3, 0, 3, 99))))
-//  println("****************" + calculate(IntCode(List(2, 4, 4, 5, 99, 0))))
+  println(
+    "Final=" + calculate(
+      IntCode(List(1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50))
+    )
+  )
+//  println("Final=" + calculate(IntCode(List(1, 0, 0, 0, 99))))
+//  println("Final=" + calculate(IntCode(List(2, 3, 0, 3, 99))))
 //  println(
-//    "****************" + calculate(IntCode(List(1, 1, 1, 4, 99, 5, 6, 0, 99)))
+//    "Final=" + calculate(IntCode(List(1, 1, 1, 4, 99, 5, 6, 0, 99)))
 //  )
-  println(calculate(IntCode(code)))
+//  println("Final=" + calculate(IntCode(code)))
 
 }
