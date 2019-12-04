@@ -5,29 +5,20 @@ trait Opcode {
   def execute(index: Int): (IntCode, Int)
 }
 
-case class Opcode1(intCode: IntCode) extends Opcode {
-  override def check(index: Int): Boolean = intCode.at(index) == 1
+case class GenericOpcode(intCode: IntCode,
+                         number: Int,
+                         action: (Int, Int) => Int)
+    extends Opcode {
+
+  override def check(index: Int): Boolean = intCode.at(index) == number
 
   override def execute(index: Int): (IntCode, Int) = {
     val index1 = intCode.at(index + 1)
     val index2 = intCode.at(index + 2)
     val outputIndex: Int = intCode.at(index + 3)
     val nextIndex = index + 4
-    val sum = intCode.at(index1) + intCode.at(index2)
-    (intCode.updated(outputIndex, sum), nextIndex)
-  }
-}
-
-case class Opcode2(intCode: IntCode) extends Opcode {
-  override def check(index: Int): Boolean = intCode.at(index) == 2
-
-  override def execute(index: Int): (IntCode, Int) = {
-    val index1 = intCode.at(index + 1)
-    val index2 = intCode.at(index + 2)
-    val outputIndex: Int = intCode.at(index + 3)
-    val nextIndex = index + 4
-    val product = intCode.at(index1) * intCode.at(index2)
-    (intCode.updated(outputIndex, product), nextIndex)
+    val result = action(intCode.at(index1), intCode.at(index2))
+    (intCode.updated(outputIndex, result), nextIndex)
   }
 }
 
@@ -40,24 +31,26 @@ case class Opcode99(intCode: IntCode) extends Opcode {
 case class IntCode(code: List[Int]) {
 
   private val opCodes: List[Opcode] =
-    List(Opcode1(this), Opcode2(this), Opcode99(this))
+    List(
+      GenericOpcode(this, 1, _ + _),
+      GenericOpcode(this, 2, _ * _),
+      Opcode99(this)
+    )
 
   def at(index: Int): Int = code(index)
   def updated(index: Int, elem: Int): IntCode =
     IntCode(code.updated(index, elem))
 
   def calculate(index: Int): (IntCode, Int) = {
-    val dd = opCodes
+    val (updatedCode, nextIndex) = opCodes
       .collectFirst {
-        case opcode if opcode.check(index) =>
-          val x = opcode.execute(index)
-          x
+        case opcode if opcode.check(index) => opcode.execute(index)
       }
       .getOrElse((this, index + 1))
     println(
-      s"At index $index, calculateCode= ${dd._1.code}, NextIndex=${dd._2}"
+      s"At index $index, calculateCode= ${updatedCode}, NextIndex=${nextIndex}"
     )
-    dd
+    (updatedCode, nextIndex)
   }
 
 }
