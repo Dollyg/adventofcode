@@ -79,16 +79,38 @@ object IntCode extends App {
     }
   }
 
-  println(
-    "Final=" + calculate(
-      IntCode(List(1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50))
-    )
-  )
+  def allCombinations(): List[(Int, Int)] = {
+    var combinations: List[(Int, Int)] = List()
+    (0 to 99).foreach { i =>
+      (0 to 99).foreach { j =>
+        combinations = (i, j) :: combinations
+      }
+    }
+    combinations
+  }
+
+  def findNounAndVerb(expected: Int, code: IntCode) = {
+    allCombinations().collectFirst {
+      case (noun, verb)
+          if calculate(code.updated(1, noun).updated(2, verb))
+            .at(0) == expected =>
+        (noun, verb)
+    }
+
+  }
+
+//  println(
+//    "Final=" + calculate(
+//      IntCode(List(1, 9, 10, 3, 2, 3, 11, 0, 99, 30, 40, 50))
+//    )
+//  )
 //  println("Final=" + calculate(IntCode(List(1, 0, 0, 0, 99))))
 //  println("Final=" + calculate(IntCode(List(2, 3, 0, 3, 99))))
 //  println(
 //    "Final=" + calculate(IntCode(List(1, 1, 1, 4, 99, 5, 6, 0, 99)))
 //  )
 //  println("Final=" + calculate(IntCode(code)))
+
+  println(findNounAndVerb(19690720, IntCode(code)))
 
 }
