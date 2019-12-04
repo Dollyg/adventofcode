@@ -1,7 +1,6 @@
 package day2
 
 case class IntCode(code: List[Int]) {
-  val strategies: Map[Int => Boolean,  ]
 
   def opcode1(index1: Int, index2: Int, outputIndex: Int): IntCode = {
     val sum = code(index1) + code(index2)
