@@ -111,25 +111,17 @@ case class Wire(path: List[Move]) {
   }
 }
 
-case class Grid(wires: List[Wire]) {
-  val wireLines: List[WireLine] = wires.map(_.line)
-
+case class Grid(wire1: Wire, wire2: Wire) {
   def distanceToClosest(): Int = {
-    val intersections = (for {
-      line1 <- wireLines
-      line2 <- wireLines
-      if line1 != line2
-    } yield {
-      line1.intersection(line2)
-    }).flatten.distinct
+    val intersections = wire1.line.intersection(wire2.line)
     Coordinate.closestTo0_0(intersections)
   }
 }
 
 object Main extends App {
 
-  def parseData(): List[Wire] =
-    Source
+  def parseData(): (Wire, Wire) = {
+    val wires = Source
       .fromResource("moves.txt")
       .getLines()
       .map { row =>
@@ -139,23 +131,9 @@ object Main extends App {
       .map(moves => Wire(moves.toList))
       .toList
 
-//  private val wire1 = Wire(
-//    List(
-//      Move(Direction.R, 8),
-//      Move(Direction.U, 5),
-//      Move(Direction.L, 5),
-//      Move(Direction.D, 3)
-//    )
-//  )
-//  private val wire2 = Wire(
-//    List(
-//      Move(Direction.U, 7),
-//      Move(Direction.R, 6),
-//      Move(Direction.D, 4),
-//      Move(Direction.L, 4)
-//    )
-//  )
-//  val wires = List(wire1, wire2)
+    (wires.head, wires(1))
+  }
 
-  println(Grid(parseData()).distanceToClosest())
+  private val (wire1, wire2) = parseData()
+  println(Grid(wire1, wire2).distanceToClosest())
 }
