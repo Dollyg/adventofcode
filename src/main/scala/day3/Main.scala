@@ -31,17 +31,21 @@ case class Coordinate(x: Int, y: Int) {
   def distance(p2: Coordinate): Double =
     Math.sqrt(Math.pow(x - p2.x, 2) + Math.pow(y - p2.y, 2))
 
+  def manhattanDistance(coordinate: Coordinate): Int =
+    Math.abs(x - coordinate.x) + Math.abs(y - coordinate.y)
+
   def isNot0_0: Boolean = x != 0 && y != 0
 }
 
 object Coordinate {
-  def closestTo0(coords: List[Coordinate]): Option[Coordinate] = {
-    val coord = coords.foldLeft(Coordinate(0, 0)) { (acc, current) =>
-      if (acc.distance(Coordinate(0, 0)) > current.distance(Coordinate(0, 0)))
-        acc
-      else current
+  def closestTo0(coords: List[Coordinate]): Int = {
+    coords.foldLeft(Int.MaxValue) { (dist, current) =>
+      val newDist = current.manhattanDistance(Coordinate(0, 0))
+      println("Coord=" + current + " dist=" + newDist)
+      if (newDist < dist)
+        newDist
+      else dist
     }
-    if (coord.isNot0_0) Some(coord) else None
   }
 }
 
@@ -104,7 +108,7 @@ case class Wire(path: List[Move]) {
 case class Grid(wires: List[Wire]) {
   val wireLines: List[WireLine] = wires.map(_.line)
 
-  def mm(): Option[Coordinate] = {
+  def mm(): Int = {
     val x = for {
       line1 <- wireLines
       line2 <- wireLines
@@ -114,17 +118,19 @@ case class Grid(wires: List[Wire]) {
       println(line2)
 
       val i = line1.intersection(line2)
-      println("Intersection="+i)
+      println("Intersection=" + i)
       i
     }
-    Coordinate.closestTo0(x.flatten)
+
+    println("x=" + x)
+    Coordinate.closestTo0(x.flatten.distinct)
   }
 }
 
 object Main extends App {
 
   val data: List[Wire] = Source
-    .fromResource("moves2.txt")
+    .fromResource("moves.txt")
     .getLines()
     .map { row =>
       val moveStrs = row.split(",")
@@ -154,5 +160,5 @@ object Main extends App {
   )
   val wires = List(wire1, wire2)
   println(Grid(data))
-  println(Grid(data).mm().get.distance(Coordinate(0,0)))
+  println(Grid(data).mm())
 }
