@@ -1,11 +1,21 @@
 package day3
 
+import scala.io.Source
+import scala.util.control.NonFatal
+
 sealed trait Direction
 object Direction {
   case object R extends Direction
   case object L extends Direction
   case object U extends Direction
   case object D extends Direction
+
+  def from(str: String): Direction = str match {
+    case "R" => R
+    case "L" => L
+    case "U" => U
+    case "D" => D
+  }
 }
 
 case class Move(direction: Direction, step: Int)
@@ -17,33 +27,64 @@ case class Coordinate(x: Int, y: Int) {
     case Direction.U => Coordinate(x, y + move.step)
     case Direction.D => Coordinate(x, y - move.step)
   }
+
+  def distance(p2: Coordinate): Double =
+    Math.sqrt(Math.pow(x - p2.x, 2) + Math.pow(y - p2.y, 2))
+
+  def isNot0_0: Boolean = x != 0 && y != 0
+}
+
+object Coordinate {
+  def closestTo0(coords: List[Coordinate]): Option[Coordinate] = {
+    val coord = coords.foldLeft(Coordinate(0, 0)) { (acc, current) =>
+      if (acc.distance(Coordinate(0, 0)) > current.distance(Coordinate(0, 0)))
+        acc
+      else current
+    }
+    if (coord.isNot0_0) Some(coord) else None
+  }
 }
 
 case class Line(coordinate1: Coordinate, coordinate2: Coordinate) {
 
-  def intersection(line: Line): Coordinate = {
+  def contains(point: Coordinate): Boolean =
+    coordinate1.distance(point) + coordinate2.distance(point) ==
+      coordinate1.distance(coordinate2)
+
+  def intersection(line: Line): Option[Coordinate] = {
     val (x1, y1) = (coordinate1.x, coordinate1.y)
     val (x2, y2) = (coordinate2.x, coordinate2.y)
     val (x3, y3) = (line.coordinate1.x, line.coordinate1.y)
     val (x4, y4) = (line.coordinate2.x, line.coordinate2.y)
 
-    val px = ((((x1 * y2) - (y1 * x2)) * (x3 - x4)) - ((x1 - x2) * ((x3 * y4) - (y3 * x4)))) /
-      (((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4)))
-    val py = ((((x1 * y2) - (y1 * x2)) * (y3 - y4)) - ((y1 - y2) * ((x3 * y4) - (y3 * x4)))) /
-      (((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4)))
+    try {
+      val px = ((((x1 * y2) - (y1 * x2)) * (x3 - x4)) - ((x1 - x2) * ((x3 * y4) - (y3 * x4)))) /
+        (((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4)))
+      val py = ((((x1 * y2) - (y1 * x2)) * (y3 - y4)) - ((y1 - y2) * ((x3 * y4) - (y3 * x4)))) /
+        (((x1 - x2) * (y3 - y4)) - ((y1 - y2) * (x3 - x4)))
 
-    Coordinate(px, py)
+      val coordinate = Coordinate(px, py)
+      if (this.contains(coordinate) && line.contains(coordinate))
+        Some(coordinate)
+      else None
+    } catch {
+      case NonFatal(_: ArithmeticException) => None
+    }
   }
 
 }
 
 case class WireLine(lines: List[Line]) {
   def intersection(other: WireLine): List[Coordinate] = {
-    for {
+    val d = for {
       line1 <- lines
       line2 <- other.lines
     } yield {
       line1.intersection(line2)
+    }
+
+    d.collect {
+      case Some(x) if x.isNot0_0 => x
     }
   }
 }
@@ -61,11 +102,40 @@ case class Wire(path: List[Move]) {
 }
 
 case class Grid(wires: List[Wire]) {
-
   val wireLines: List[WireLine] = wires.map(_.line)
+
+  def mm(): Option[Coordinate] = {
+    val x = for {
+      line1 <- wireLines
+      line2 <- wireLines
+      if line1 != line2
+    } yield {
+      println(line1)
+      println(line2)
+
+      val i = line1.intersection(line2)
+      println("Intersection="+i)
+      i
+    }
+    Coordinate.closestTo0(x.flatten)
+  }
 }
 
 object Main extends App {
+
+  val data: List[Wire] = Source
+    .fromResource("moves2.txt")
+    .getLines()
+    .map { row =>
+      val moveStrs = row.split(",")
+      moveStrs.map(str => {
+        val (dir, step) = str.splitAt(1)
+        Move(Direction.from(dir), step.toInt)
+      })
+    }
+    .map(moves => Wire(moves.toList))
+    .toList
+
   private val wire1 = Wire(
     List(
       Move(Direction.R, 8),
@@ -83,6 +153,6 @@ object Main extends App {
     )
   )
   val wires = List(wire1, wire2)
-  Grid(wires).wireLines.foreach(println)
-
+  println(Grid(data))
+  println(Grid(data).mm().get.distance(Coordinate(0,0)))
 }
