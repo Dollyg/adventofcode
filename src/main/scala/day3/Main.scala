@@ -55,7 +55,9 @@ object Coordinate {
   def _0_0: Coordinate = Coordinate(0, 0)
 }
 
-case class Line(coordinate1: Coordinate, coordinate2: Coordinate) {
+case class Line(coordinate1: Coordinate,
+                coordinate2: Coordinate,
+                stepDistance: Int) {
 
   def contains(point: Coordinate): Boolean =
     coordinate1.distance(point) + coordinate2.distance(point) ==
@@ -97,16 +99,28 @@ case class WireLine(lines: List[Line]) {
       case Some(x) if x.isNot0_0 => x
     }
   }
+
+  def bestStep(coordinate: Coordinate): Int = {
+    println("Coord="+coordinate)
+    val (liness, line2 :: _) = lines.splitAt(lines.indexWhere(_.contains(coordinate)))
+    println("l="+liness.last, " steD="+liness.last.stepDistance)
+    println("l2="+line2)
+    (lines.last.stepDistance + line2.coordinate1.distance(coordinate)).toInt
+  }
 }
 
 case class Wire(path: List[Move]) {
+
   def line: WireLine = {
-    var lastCoordinate = Coordinate(0, 0)
+    var lastCoordinate = Coordinate._0_0
+    var dist = 0
     WireLine(path.map { move =>
       val p1 = lastCoordinate
       val p2 = lastCoordinate.after(move)
+      println(p2 + ":" + (dist + move.step))
+      dist = dist + move.step
       lastCoordinate = p2
-      Line(p1, p2)
+      Line(p1, p2, dist)
     })
   }
 }
@@ -115,6 +129,22 @@ case class Grid(wire1: Wire, wire2: Wire) {
   def distanceToClosest(): Int = {
     val intersections = wire1.line.intersection(wire2.line)
     Coordinate.closestTo0_0(intersections)
+  }
+
+  def bestSteps(): Int = {
+    val line1 = wire1.line
+    val line2 = wire2.line
+    println(line1)
+    println(line2)
+    val intersections = line1.intersection(line2)
+    println("Intersections=" + intersections)
+    intersections.foldLeft(Int.MaxValue) { (acc, coord) =>
+      println("Coord=" + coord)
+      println("Bestline1" + line1.bestStep(coord))
+      println("Bestline2" + line2.bestStep(coord))
+      val bestStep = line1.bestStep(coord) + line2.bestStep(coord)
+      if (acc < bestStep) acc else bestStep
+    }
   }
 }
 
@@ -135,5 +165,8 @@ object Main extends App {
   }
 
   private val (wire1, wire2) = parseData()
-  println(Grid(wire1, wire2).distanceToClosest())
+//  println("Distance="+Grid(wire1, wire2).distanceToClosest())
+  println("BestSteps=" + Grid(wire1, wire2).bestSteps())
+
+//  println("--------"+Coordinate(107,78).distance(Coordinate(107,47)))
 }
