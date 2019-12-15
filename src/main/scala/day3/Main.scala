@@ -63,7 +63,7 @@ case class Line(coordinate1: Coordinate,
     coordinate1.distance(point) + coordinate2.distance(point) ==
       coordinate1.distance(coordinate2)
 
-  def intersection(line: Line): Option[Coordinate] = {
+  def intersection(line: Line): Coordinate = {
     val (x1, y1) = (coordinate1.x, coordinate1.y)
     val (x2, y2) = (coordinate2.x, coordinate2.y)
     val (x3, y3) = (line.coordinate1.x, line.coordinate1.y)
@@ -77,35 +77,30 @@ case class Line(coordinate1: Coordinate,
 
       val coordinate = Coordinate(px, py)
       if (this.contains(coordinate) && line.contains(coordinate))
-        Some(coordinate)
-      else None
+        coordinate
+      else Coordinate._0_0
     } catch {
-      case NonFatal(_: ArithmeticException) => None
+      case NonFatal(_: ArithmeticException) => Coordinate._0_0
     }
   }
 
 }
 
 case class WireLine(lines: List[Line]) {
-  def intersection(other: WireLine): List[Coordinate] = {
-    val d = for {
+  def intersection(other: WireLine): List[Coordinate] =
+    (for {
       line1 <- lines
       line2 <- other.lines
     } yield {
       line1.intersection(line2)
-    }
+    }).filter(_.isNot0_0)
 
-    d.collect {
-      case Some(x) if x.isNot0_0 => x
-    }
-  }
+  def stepDistance(coordinate: Coordinate): Int = {
+    val (linesTillIntersection, lineOfIntersection :: _) =
+      lines.splitAt(lines.indexWhere(_.contains(coordinate)))
 
-  def bestStep(coordinate: Coordinate): Int = {
-    println("Coord="+coordinate)
-    val (liness, line2 :: _) = lines.splitAt(lines.indexWhere(_.contains(coordinate)))
-    println("l="+liness.last, " steD="+liness.last.stepDistance)
-    println("l2="+line2)
-    (lines.last.stepDistance + line2.coordinate1.distance(coordinate)).toInt
+    linesTillIntersection.last.stepDistance +
+      lineOfIntersection.coordinate1.distance(coordinate).toInt
   }
 }
 
@@ -134,17 +129,11 @@ case class Grid(wire1: Wire, wire2: Wire) {
   def bestSteps(): Int = {
     val line1 = wire1.line
     val line2 = wire2.line
-    println(line1)
-    println(line2)
     val intersections = line1.intersection(line2)
     println("Intersections=" + intersections)
-    intersections.foldLeft(Int.MaxValue) { (acc, coord) =>
-      println("Coord=" + coord)
-      println("Bestline1" + line1.bestStep(coord))
-      println("Bestline2" + line2.bestStep(coord))
-      val bestStep = line1.bestStep(coord) + line2.bestStep(coord)
-      if (acc < bestStep) acc else bestStep
-    }
+    intersections
+      .map(coord => line1.stepDistance(coord) + line2.stepDistance(coord))
+      .min
   }
 }
 
@@ -165,8 +154,6 @@ object Main extends App {
   }
 
   private val (wire1, wire2) = parseData()
-//  println("Distance="+Grid(wire1, wire2).distanceToClosest())
+  println("Distance="+Grid(wire1, wire2).distanceToClosest())
   println("BestSteps=" + Grid(wire1, wire2).bestSteps())
-
-//  println("--------"+Coordinate(107,78).distance(Coordinate(107,47)))
 }
